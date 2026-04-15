@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/jzmack/chirpy/internal/auth"
 )
@@ -12,6 +13,11 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		Expiry   *int   `json:"expires_in_seconds"`
+	}
+	type response struct {
+		User
+		Token string `json:"token"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
@@ -36,12 +42,26 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	expiresInSeconds := 3600
 	if passwordCheck == true {
-		respondWithJSON(w, http.StatusOK, User{
-			dbUser.ID,
-			dbUser.CreatedAt,
-			dbUser.UpdatedAt,
-			dbUser.Email,
+		if params.Expiry != nil && *params.Expiry < 3600 {
+			expiresInSeconds = *params.Expiry
+		}
+		duration := time.Duration(expiresInSeconds) * time.Second
+		token, err := auth.MakeJWT(dbUser.ID, cfg.apiSecret, duration)
+		if err != nil {
+			log.Printf("Error generating token: %s", err)
+			respondWithError(w, http.StatusInternalServerError, "Error generating token.")
+			return
+		}
+		respondWithJSON(w, http.StatusOK, response{
+			User: User{
+				dbUser.ID,
+				dbUser.CreatedAt,
+				dbUser.UpdatedAt,
+				dbUser.Email,
+			},
+			Token: token,
 		})
 	} else {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password")
