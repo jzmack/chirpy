@@ -35,6 +35,7 @@ func (cfg *apiConfig) handlerUsers(w http.ResponseWriter, r *http.Request) {
 	hashedPass, err := auth.HashPassword(params.Password)
 	if err != nil {
 		log.Printf("Error hashing password: %s", err)
+		respondWithError(w, http.StatusInternalServerError, "Error hashing password")
 		return
 	}
 
