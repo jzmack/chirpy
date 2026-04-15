@@ -31,7 +31,7 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) handlerGetChirpsID(w http.ResponseWriter, r *http.Request) {
 	chirpID, err := uuid.Parse(r.PathValue("chirpID"))
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Error parsing chirpID")
+		respondWithError(w, http.StatusBadRequest, "Error parsing chirpID")
 		return
 	}
 
