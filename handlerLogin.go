@@ -1,23 +1,25 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/jzmack/chirpy/internal/auth"
+	"github.com/jzmack/chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
-		Expiry   *int   `json:"expires_in_seconds"`
 	}
 	type response struct {
 		User
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
@@ -43,17 +45,31 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	expiresInSeconds := 3600
+	refreshLength := time.Hour * 60 * 24
 	if passwordCheck == true {
-		if params.Expiry != nil && *params.Expiry < 3600 {
-			expiresInSeconds = *params.Expiry
-		}
 		duration := time.Duration(expiresInSeconds) * time.Second
 		token, err := auth.MakeJWT(dbUser.ID, cfg.apiSecret, duration)
 		if err != nil {
-			log.Printf("Error generating token: %s", err)
-			respondWithError(w, http.StatusInternalServerError, "Error generating token.")
+			log.Printf("Error generating access token: %s", err)
+			respondWithError(w, http.StatusInternalServerError, "Error generating access token.")
 			return
 		}
+
+		refreshExpires := time.Now().Add(refreshLength)
+		refreshToken := auth.MakeRefreshToken()
+		refreshParams := database.CreateRefreshTokenParams{
+			Token:     refreshToken,
+			UserID:    dbUser.ID,
+			ExpiresAt: refreshExpires,
+			RevokedAt: sql.NullTime{},
+		}
+		dbRefresh, err := cfg.db.CreateRefreshToken(r.Context(), refreshParams)
+		if err != nil {
+			log.Printf("Error creating refresh token: %s", err)
+			respondWithError(w, http.StatusInternalServerError, "Error creating refresh token")
+			return
+		}
+
 		respondWithJSON(w, http.StatusOK, response{
 			User: User{
 				dbUser.ID,
@@ -61,7 +77,8 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 				dbUser.UpdatedAt,
 				dbUser.Email,
 			},
-			Token: token,
+			Token:        token,
+			RefreshToken: dbRefresh.Token,
 		})
 	} else {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password")
