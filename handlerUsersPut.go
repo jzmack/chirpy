@@ -32,7 +32,7 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 	err = decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding params: %s", err)
-		w.WriteHeader(400)
+		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters")
 		return
 	}
 	hashedPass, err := auth.HashPassword(params.Password)
