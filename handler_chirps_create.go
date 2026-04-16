@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jzmack/chirpy/internal/auth"
 	"github.com/jzmack/chirpy/internal/database"
 )
 
@@ -24,13 +25,23 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 		Body   string `json:"body"`
 		UserID string `json:"user_id"`
 	}
+	bearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Error getting Bearer Token")
+		return
+	}
+	userId, err := auth.ValidateJWT(bearer, cfg.apiSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid Bearer Token")
+		return
+	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		log.Printf("Error decoding params: %s", err)
-		w.WriteHeader(500)
+	derr := decoder.Decode(&params)
+	if derr != nil {
+		log.Printf("Error decoding params: %s", derr)
+		respondWithError(w, http.StatusBadRequest, "Error decoding params")
 		return
 	}
 
@@ -38,17 +49,11 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 		respondWithError(w, 400, "Chirp is too long")
 		return
 	}
-	cleaned_body := cleanBody(params.Body)
-	user_id, err := uuid.Parse(params.UserID)
-	if err != nil {
-		log.Printf("Error parsing user ID: %s", err)
-		w.WriteHeader(500)
-		return
-	}
+	cleanedBody := cleanBody(params.Body)
 
 	chirp_params := database.CreateChirpParams{
-		Body:   cleaned_body,
-		UserID: user_id,
+		Body:   cleanedBody,
+		UserID: userId,
 	}
 
 	chirp, err := cfg.db.CreateChirp(r.Context(), chirp_params)
