@@ -53,6 +53,7 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 		user.CreatedAt,
 		user.UpdatedAt,
 		user.Email,
+		user.IsChirpyRed,
 	}
 	respondWithJSON(w, http.StatusOK, responseUser)
 }
