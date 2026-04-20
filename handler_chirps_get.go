@@ -1,14 +1,32 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"sort"
 
 	"github.com/google/uuid"
 )
 
+func sortOrderFromRequest(r *http.Request) (string, error) {
+	orderString := r.URL.Query().Get("sort")
+	if orderString == "" {
+		return "", nil
+	} else if orderString == "asc" {
+		return "asc", nil
+	} else if orderString == "desc" {
+		return "desc", nil
+	}
+	return "", errors.New("Not a valid sort by expression")
+}
+
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	idString := r.URL.Query().Get("author_id")
+	sortBy, err := sortOrderFromRequest(r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Not a valid sort by expression")
+	}
 	var allChirps []Chirp
 	if idString == "" {
 		dbChirps, err := cfg.db.GetAllChirps(r.Context())
@@ -27,7 +45,17 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 			}
 			allChirps = append(allChirps, chirp)
 		}
-		respondWithJSON(w, http.StatusOK, allChirps)
+		if sortBy == "desc" {
+			sort.Slice(allChirps, func(i, j int) bool {
+				return allChirps[i].CreatedAt.After(allChirps[j].CreatedAt)
+			})
+			respondWithJSON(w, http.StatusOK, allChirps)
+		} else {
+			sort.Slice(allChirps, func(i, j int) bool {
+				return allChirps[i].CreatedAt.Before(allChirps[j].CreatedAt)
+			})
+			respondWithJSON(w, http.StatusOK, allChirps)
+		}
 	} else {
 		parsedID, err := uuid.Parse(idString)
 		if err != nil {
@@ -51,7 +79,17 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 			}
 			allChirps = append(allChirps, chirp)
 		}
-		respondWithJSON(w, http.StatusOK, allChirps)
+		if sortBy == "desc" {
+			sort.Slice(allChirps, func(i, j int) bool {
+				return allChirps[i].CreatedAt.After(allChirps[j].CreatedAt)
+			})
+			respondWithJSON(w, http.StatusOK, allChirps)
+		} else {
+			sort.Slice(allChirps, func(i, j int) bool {
+				return allChirps[i].CreatedAt.Before(allChirps[j].CreatedAt)
+			})
+			respondWithJSON(w, http.StatusOK, allChirps)
+		}
 	}
 
 }
