@@ -8,24 +8,52 @@ import (
 )
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	idString := r.URL.Query().Get("author_id")
 	var allChirps []Chirp
-	dbChirps, err := cfg.db.GetAllChirps(r.Context())
-	if err != nil {
-		log.Printf("Error getting all Chirps: %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	for i := 0; i < len(dbChirps); i++ {
-		chirp := Chirp{
-			dbChirps[i].ID,
-			dbChirps[i].CreatedAt,
-			dbChirps[i].UpdatedAt,
-			dbChirps[i].Body,
-			dbChirps[i].UserID,
+	if idString == "" {
+		dbChirps, err := cfg.db.GetAllChirps(r.Context())
+		if err != nil {
+			log.Printf("Error getting all Chirps: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
-		allChirps = append(allChirps, chirp)
+		for i := 0; i < len(dbChirps); i++ {
+			chirp := Chirp{
+				dbChirps[i].ID,
+				dbChirps[i].CreatedAt,
+				dbChirps[i].UpdatedAt,
+				dbChirps[i].Body,
+				dbChirps[i].UserID,
+			}
+			allChirps = append(allChirps, chirp)
+		}
+		respondWithJSON(w, http.StatusOK, allChirps)
+	} else {
+		parsedID, err := uuid.Parse(idString)
+		if err != nil {
+			log.Printf("Error parsing author_id: %s", err)
+			respondWithError(w, http.StatusBadRequest, "Error parsing author_id")
+			return
+		}
+		dbChirps, err := cfg.db.GetChirpsByAuthor(r.Context(), parsedID)
+		if err != nil {
+			log.Printf("Error getting chirps from author")
+			respondWithError(w, http.StatusInternalServerError, "Error getting chirps from author")
+			return
+		}
+		for i := 0; i < len(dbChirps); i++ {
+			chirp := Chirp{
+				dbChirps[i].ID,
+				dbChirps[i].CreatedAt,
+				dbChirps[i].UpdatedAt,
+				dbChirps[i].Body,
+				dbChirps[i].UserID,
+			}
+			allChirps = append(allChirps, chirp)
+		}
+		respondWithJSON(w, http.StatusOK, allChirps)
 	}
-	respondWithJSON(w, http.StatusOK, allChirps)
+
 }
 
 func (cfg *apiConfig) handlerGetChirpsID(w http.ResponseWriter, r *http.Request) {
