@@ -130,28 +130,18 @@ jzm@sandor-lnx:~/workspace/chirpy/sql/schema$ goose postgres postgres://postgres
 2026/07/13 15:13:53 goose: successfully migrated database to version: 5
 ```
 
-Create a `.env` file or environment(the app uses godotenv) with the following the variables:
+A `.env` file can be used(the app uses godotenv) with the following the variables:
 
-```bash
-export DB_URL="postgres://user:pass@localhost:5432/chirpy"
-export API_SECRET="replace_with_API_secret"
-export POLKA_KEY="replace_with_polka_key"
-export PLATFORM="local"
+```plain
+DB_URL="postgres://user:pass@localhost:5432/chirpy"
+API_SECRET="replace_with_API_secret"
+POLKA_KEY="replace_with_polka_key"
+PLATFORM="local"
 ```
-
-#### 3. Create DB schema
-
-Apply the SQL located in the `sql/` directory to your PostgreSQL instance. Example (replace the filename if different):
-
-```bash
-psql "$DB_URL" -f sql/schema.sql
-```
-
-If you're unsure which file is the schema, inspect the `sql/` directory for files that create tables (e.g., `schema.sql`, `migrations.sql`, etc.).
 
 #### 4. (Optional) Regenerate sqlc code
 
-If you edit SQL files, regenerate the Go DB layer with sqlc:
+The code included under the `sql` will work as is but if you edit SQL files, regenerate the Go DB layer with sqlc:
 
 ```bash
 sqlc generate
@@ -180,9 +170,9 @@ By default the server listens on port 8080 and serves static files under `/app/`
 curl http://localhost:8080/api/healthz
 curl http://localhost:8080/api/chirps
 # Visit static UI
-# http://localhost:8080/app/index.html
+# http://localhost:8080/app
 ```
 
-## API endpoints
+## Test API endpoints
 
 to be continued...
