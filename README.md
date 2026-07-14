@@ -75,7 +75,7 @@ sudo apt install postgresql postgresql-contrib
 Validate PostgreSQL installation with:
 ```bash
 psql --version # validate install
-sudo service postgres status # should be active
+sudo service postgresql status # should be active
 ```
 
 ### 3. Setting up environment
@@ -102,6 +102,8 @@ Set the database user (`postgres` is also the name of the user in this example) 
 
 ```sql
 ALTER USER postgres WITH PASSWORD 'yourpassword';
+exit
+
 ```
 
 Test connection to the database using the following from the Linux shell (be sure to update `user` and `pass` in the connection string):
@@ -117,6 +119,8 @@ Once connection string is confirmed, change into the `sql/schema` directory and 
 ```bash
 cd sql/schema
 goose postgres postgres://user:pass@localhost:5432/chirpy up
+cd ../..
+
 ```
 Example output looks like:
 
@@ -136,7 +140,7 @@ A `.env` file can be used(the app uses godotenv) with the following the variable
 DB_URL="postgres://user:pass@localhost:5432/chirpy"
 API_SECRET="replace_with_API_secret"
 POLKA_KEY="replace_with_polka_key"
-PLATFORM="local"
+PLATFORM="dev"
 ```
 
 #### 4. (Optional) Regenerate sqlc code
